@@ -1,10 +1,7 @@
 import json
 import random
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     MessageHandler,
@@ -14,11 +11,13 @@ from telegram.ext import (
     filters
 )
 
-BOT_TOKEN = "توکن_ربات"
-CHANNEL_ID = -1001234567890
-ADMINS = [123456789]
+# ✅ استفاده از Environment Variables
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1001234567890"))
+ADMINS = list(map(int, os.environ.get("ADMINS", "").split(","))) if os.environ.get("ADMINS") else []
+
 DATA_FILE = "data.json"
-MIN_DURATION = 10
+MIN_DURATION = 10  # ثانیه
 
 MESSAGES = {
     "start": {
@@ -58,6 +57,7 @@ MESSAGES = {
     }
 }
 
+# ---------- داده‌ها ----------
 def load_data():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -82,8 +82,7 @@ def t(key, lang, **kwargs):
 def is_banned(user_id, data):
     return str(user_id) in data["banned"]
 
-# ---------- Commands ----------
-
+# ---------- دستورات ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     lang = get_lang(update, data)
@@ -117,8 +116,7 @@ async def lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text(t("lang_set", lang))
 
-# ---------- Video Handler ----------
-
+# ---------- مدیریت ویدئو ----------
 async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     lang = get_lang(update, data)
@@ -168,8 +166,7 @@ async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         t("success", lang, count=len(random_videos))
     )
 
-# ---------- Admin ----------
-
+# ---------- ادمین ----------
 async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMINS:
         return
@@ -191,13 +188,11 @@ async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Unbanned")
 
 # ---------- Main ----------
-
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("language", language))
-    app.add_handler(CommandHandler("lang", language))
     app.add_handler(CallbackQueryHandler(lang_callback, pattern="^lang_"))
 
     app.add_handler(CommandHandler("ban", ban))
